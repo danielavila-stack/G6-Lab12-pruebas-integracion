@@ -59,4 +59,14 @@ public class TypeControllerTest {
                 .andExpect(jsonPath("$.snake").doesNotExist());
     }
 
+    /**
+     * DELETE /types/1000 -> 404 Not Found
+     */
+    @Test
+    public void testDeleteTypeKO() throws Exception {
+
+        this.mockMvc.perform(delete("/types/" + "1000"))
+                .andExpect(status().isNotFound());
+    }
+
 }

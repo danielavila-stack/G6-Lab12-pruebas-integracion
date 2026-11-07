@@ -73,4 +73,19 @@ public class TypeControllerMockitoTest {
                 .andExpect(jsonPath("$.snake").doesNotExist());
     }
 
+    /**
+     * DELETE /types/1000 -> 404 Not Found
+     */
+    @Test
+    public void testDeleteTypeKO() throws Exception {
+
+        Integer ID_NOT_EXIST = 1000;
+
+        Mockito.doThrow(new TypeNotFoundException("Record not found...!"))
+                .when(this.typeService).delete(ID_NOT_EXIST);
+
+        this.mockMvc.perform(delete("/types/" + ID_NOT_EXIST))
+                .andExpect(status().isNotFound());
+    }
+
 }
