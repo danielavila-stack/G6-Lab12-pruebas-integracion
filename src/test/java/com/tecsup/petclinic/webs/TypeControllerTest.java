@@ -73,4 +73,15 @@ public class TypeControllerTest {
 				.andExpect(jsonPath("$.active", is(true)));
 	}
 
+	/**
+	 * GET /types/666 -> 404 Not Found (no existe)
+	 */
+    @Test
+    public void testFindTypeKO() throws Exception {
+
+        this.mockMvc.perform(get("/types/666"))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+    }
+
 }

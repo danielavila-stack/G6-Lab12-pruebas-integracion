@@ -83,4 +83,20 @@ public class TypeControllerMockitoTest {
 				.andExpect(jsonPath("$.active", is(typeTO.getActive())));
 	}
 
+	/**
+	 * GET /types/666 -> el servicio lanza TypeNotFoundException -> 404
+	 */
+	@Test
+	public void testFindTypeKO() throws Exception {
+
+		Integer ID_NOT_EXIST = 666;
+
+		Mockito.when(typeService.findById(ID_NOT_EXIST))
+				.thenThrow(new TypeNotFoundException("Record not found...!"));
+
+        this.mockMvc.perform(get("/types/" + ID_NOT_EXIST))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+	}
+
 }
