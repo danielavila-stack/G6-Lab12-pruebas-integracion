@@ -57,4 +57,20 @@ public class TypeControllerMockitoTest {
                 .andExpect(jsonPath("$[*].name", not(hasItem("snake"))));
     }
 
+    /**
+     * GET /types/report/pet-count -> el reporte no incluye tipos inactivos (snake)
+     */
+    @Test
+    public void testGetPetCountByType_ExcludeInactive() throws Exception {
+
+        Mockito.when(this.typeService.getPetCountByType())
+                .thenReturn(TObjectCreator.getPetCountByType());
+
+        this.mockMvc.perform(get("/types/report/pet-count"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cat", is(4)))
+                .andExpect(jsonPath("$.snake").doesNotExist());
+    }
+
 }
