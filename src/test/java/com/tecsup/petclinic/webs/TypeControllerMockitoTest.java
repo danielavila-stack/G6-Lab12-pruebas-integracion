@@ -3,7 +3,6 @@ package com.tecsup.petclinic.webs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import com.tecsup.petclinic.dtos.TypeDTO;
-import com.tecsup.petclinic.dtos.TypeDTO;
 import com.tecsup.petclinic.exceptions.TypeNotFoundException;
 import com.tecsup.petclinic.services.TypeService;
 import com.tecsup.petclinic.util.TObjectCreator;
@@ -19,29 +18,26 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.CoreMatchers.is;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.List;
-
-import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Pruebas de TypeController (/types) con el servicio mockeado (@MockitoBean).
- * Solo se prueba el controlador y el contrato JSON; no se toca la BD.
+ * Pruebas de TypeController (/types) con el servicio MOCKEADO (@MockitoBean).
+ * No se toca la base de datos: Mockito decide que responde el servicio,
+ * asi solo se prueba la logica del controlador y el JSON que devuelve.
  *
+ * Grupo 6
+ * Integrante A: testFindAllTypes, testFindTypeOK, testFindTypeKO
  * Integrante B: testCreateType, testGetPetCountByType, testDeleteType
- * Pruebas de TypeController con el servicio MOCKEADO.
- * No se toca la base de datos: Mockito decide qué responde el servicio,
- * así solo se prueba la lógica del controlador y el JSON que devuelve.
+ * Integrante C: testFindActiveTypes, testGetPetCountByType_ExcludeInactive, testDeleteTypeKO
  */
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -54,10 +50,71 @@ public class TypeControllerMockitoTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private TypeService typeService;
+    private TypeService typeService;   // servicio simulado
 
     // ---------------------------------------------------------------
-    // Integrante B — Creación y reporte
+    // Integrante A - Listado y consulta
+    // ---------------------------------------------------------------
+
+    /**
+     * GET /types -> 200 OK y la lista que devuelve el servicio simulado
+     */
+    @Test
+    public void testFindAllTypes() throws Exception {
+
+        List<TypeDTO> typesTO = TObjectCreator.getAllTypesTO();
+
+        Mockito.when(typeService.findAll())
+                .thenReturn(typesTO);
+
+        this.mockMvc.perform(get("/types"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
+                .andExpect(jsonPath("$", hasSize(typesTO.size())))
+                .andExpect(jsonPath("$[0].id", is(typesTO.get(0).getId())))
+                .andExpect(jsonPath("$[0].name", is(typesTO.get(0).getName())));
+    }
+
+    /**
+     * GET /types/1 -> 200 OK con el tipo que devuelve el servicio simulado
+     */
+    @Test
+    public void testFindTypeOK() throws Exception {
+
+        TypeDTO typeTO = TObjectCreator.getTypeTO();
+
+        Mockito.when(typeService.findById(typeTO.getId()))
+                .thenReturn(typeTO);
+
+        this.mockMvc.perform(get("/types/" + typeTO.getId()))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id", is(typeTO.getId())))
+                .andExpect(jsonPath("$.name", is(typeTO.getName())))
+                .andExpect(jsonPath("$.description", is(typeTO.getDescription())))
+                .andExpect(jsonPath("$.active", is(typeTO.getActive())));
+    }
+
+    /**
+     * GET /types/666 -> el servicio lanza TypeNotFoundException -> 404
+     */
+    @Test
+    public void testFindTypeKO() throws Exception {
+
+        Integer ID_NOT_EXIST = 666;
+
+        Mockito.when(typeService.findById(ID_NOT_EXIST))
+                .thenThrow(new TypeNotFoundException("Record not found...!"));
+
+        this.mockMvc.perform(get("/types/" + ID_NOT_EXIST))
+                .andDo(print())
+                .andExpect(status().isNotFound());
+    }
+
+    // ---------------------------------------------------------------
+    // Integrante B - Creacion y reporte
     // ---------------------------------------------------------------
 
     /**
@@ -138,71 +195,57 @@ public class TypeControllerMockitoTest {
         Mockito.verify(typeService).delete(id);
     }
 
-}
-	private static final ObjectMapper om = new ObjectMapper();
+    // ---------------------------------------------------------------
+    // Integrante C - Filtros y errores
+    // ---------------------------------------------------------------
 
-	@Autowired
-	private MockMvc mockMvc;
+    /**
+     * GET /types?active=true -> 7 tipos (excluye snake)
+     */
+    @Test
+    public void testFindActiveTypes() throws Exception {
 
-	@MockitoBean
-	private TypeService typeService;   // servicio simulado
+        int NRO_ACTIVE_TYPES = 7;
 
+        Mockito.when(this.typeService.findByActive(true))
+                .thenReturn(TObjectCreator.getActiveTypesTO());
 
-	/**
-	 * GET /types -> 200 OK y la lista que devuelve el servicio simulado
-	 */
-	@Test
-	public void testFindAllTypes() throws Exception {
-
-		List<TypeDTO> typesTO = TObjectCreator.getAllTypesTO();
-
-		Mockito.when(typeService.findAll())
-				.thenReturn(typesTO);
-
-		this.mockMvc.perform(get("/types"))
-				.andDo(print())
-				.andExpect(status().isOk())
-				.andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-				.andExpect(jsonPath("$", hasSize(typesTO.size())))
-				.andExpect(jsonPath("$[0].id", is(typesTO.get(0).getId())))
-				.andExpect(jsonPath("$[0].name", is(typesTO.get(0).getName())));
-	}
-
-	/**
-	 * GET /types/1 -> 200 OK con el tipo que devuelve el servicio simulado
-	 */
-	@Test
-	public void testFindTypeOK() throws Exception {
-
-		TypeDTO typeTO = TObjectCreator.getTypeTO();
-
-		Mockito.when(typeService.findById(typeTO.getId()))
-				.thenReturn(typeTO);
-
-		this.mockMvc.perform(get("/types/" + typeTO.getId()))
-				.andDo(print())
-				.andExpect(status().isOk())
-				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
-				.andExpect(jsonPath("$.id", is(typeTO.getId())))
-				.andExpect(jsonPath("$.name", is(typeTO.getName())))
-				.andExpect(jsonPath("$.description", is(typeTO.getDescription())))
-				.andExpect(jsonPath("$.active", is(typeTO.getActive())));
-	}
-
-	/**
-	 * GET /types/666 -> el servicio lanza TypeNotFoundException -> 404
-	 */
-	@Test
-	public void testFindTypeKO() throws Exception {
-
-		Integer ID_NOT_EXIST = 666;
-
-		Mockito.when(typeService.findById(ID_NOT_EXIST))
-				.thenThrow(new TypeNotFoundException("Record not found...!"));
-
-        this.mockMvc.perform(get("/types/" + ID_NOT_EXIST))
+        this.mockMvc.perform(get("/types").param("active", "true"))
                 .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size()", is(NRO_ACTIVE_TYPES)))
+                .andExpect(jsonPath("$[*].name", not(hasItem("snake"))));
+    }
+
+    /**
+     * GET /types/report/pet-count -> el reporte no incluye tipos inactivos (snake)
+     */
+    @Test
+    public void testGetPetCountByType_ExcludeInactive() throws Exception {
+
+        Mockito.when(this.typeService.getPetCountByType())
+                .thenReturn(TObjectCreator.getPetCountByType());
+
+        this.mockMvc.perform(get("/types/report/pet-count"))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cat", is(4)))
+                .andExpect(jsonPath("$.snake").doesNotExist());
+    }
+
+    /**
+     * DELETE /types/1000 -> 404 Not Found
+     */
+    @Test
+    public void testDeleteTypeKO() throws Exception {
+
+        Integer ID_NOT_EXIST = 1000;
+
+        Mockito.doThrow(new TypeNotFoundException("Record not found...!"))
+                .when(this.typeService).delete(ID_NOT_EXIST);
+
+        this.mockMvc.perform(delete("/types/" + ID_NOT_EXIST))
                 .andExpect(status().isNotFound());
-	}
+    }
 
 }
