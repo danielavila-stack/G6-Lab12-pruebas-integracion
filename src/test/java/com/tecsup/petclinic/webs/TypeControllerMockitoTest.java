@@ -62,4 +62,25 @@ public class TypeControllerMockitoTest {
 				.andExpect(jsonPath("$[0].name", is(typesTO.get(0).getName())));
 	}
 
+	/**
+	 * GET /types/1 -> 200 OK con el tipo que devuelve el servicio simulado
+	 */
+	@Test
+	public void testFindTypeOK() throws Exception {
+
+		TypeDTO typeTO = TObjectCreator.getTypeTO();
+
+		Mockito.when(typeService.findById(typeTO.getId()))
+				.thenReturn(typeTO);
+
+		this.mockMvc.perform(get("/types/" + typeTO.getId()))
+				.andDo(print())
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$.id", is(typeTO.getId())))
+				.andExpect(jsonPath("$.name", is(typeTO.getName())))
+				.andExpect(jsonPath("$.description", is(typeTO.getDescription())))
+				.andExpect(jsonPath("$.active", is(typeTO.getActive())));
+	}
+
 }

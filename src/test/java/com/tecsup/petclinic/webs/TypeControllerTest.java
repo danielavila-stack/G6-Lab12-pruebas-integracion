@@ -53,4 +53,24 @@ public class TypeControllerTest {
 
 	}
 
+	/**
+	 * GET /types/1 -> 200 OK y el tipo "cat"
+	 */
+	@Test
+	public void testFindTypeOK() throws Exception {
+
+		final int TYPE_ID = 1;
+		final String TYPE_NAME = "cat";
+		final String DESCRIPTION = "Domestic feline";
+
+		this.mockMvc.perform(get("/types/" + TYPE_ID))
+				.andDo(print())
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$.id", is(TYPE_ID)))
+				.andExpect(jsonPath("$.name", is(TYPE_NAME)))
+				.andExpect(jsonPath("$.description", is(DESCRIPTION)))
+				.andExpect(jsonPath("$.active", is(true)));
+	}
+
 }
